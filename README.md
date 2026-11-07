@@ -20,9 +20,3 @@ The initial scenario synchronizes order events with a simulated fulfillment prov
 6. Investigate, recover, and verify the final state.
 
 AI assistance is limited to evidence-grounded investigation and recommendations. Authorization, recovery, and state changes remain under deterministic application controls and human approval.
-
-## Status
-
-AlertOps is in early development. The repository and project scope are established; domain and database design are next.
-
-Documentation and local setup instructions will be added as each part of the system is implemented.
