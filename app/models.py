@@ -54,13 +54,48 @@ class Event(Base):
 
 class Job(Base):
     __tablename__ = "jobs"
-    __table_args__ = (CheckConstraint("state = 'QUEUED'", name="ck_job_state"),)
+    __table_args__ = (
+        CheckConstraint("state IN ('QUEUED','RUNNING','SUCCEEDED','UNKNOWN_OUTCOME','FAILED')", name="ck_job_state"),
+        CheckConstraint("attempt_count >= 0", name="ck_job_attempt_count"),
+        CheckConstraint("(state = 'RUNNING' AND claim_token IS NOT NULL AND lease_expires_at IS NOT NULL) OR (state != 'RUNNING' AND claim_token IS NULL AND lease_expires_at IS NULL)", name="ck_job_claim"),
+        CheckConstraint("state != 'SUCCEEDED' OR (provider_shipment_id IS NOT NULL AND verified_at IS NOT NULL)", name="ck_job_verified"),
+        Index("ix_jobs_recovery", "state", "next_check_at", "updated_at"),
+        Index("ix_jobs_lease", "lease_expires_at", postgresql_where=text("state = 'RUNNING'")),
+    )
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="RESTRICT"), unique=True)
     operation_key: Mapped[str] = mapped_column(String, unique=True)
     state: Mapped[str] = mapped_column(String, server_default="QUEUED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    claim_token: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempt_count: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    next_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_shipment_id: Mapped[str | None] = mapped_column(String)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class JobAttempt(Base):
+    __tablename__ = "job_attempts"
+    __table_args__ = (
+        UniqueConstraint("job_id", "attempt_number", name="uq_attempt_number"),
+        CheckConstraint("attempt_number > 0", name="ck_attempt_number"),
+        CheckConstraint("kind IN ('CREATE','VERIFY')", name="ck_attempt_kind"),
+        CheckConstraint("outcome IN ('RUNNING','SUCCEEDED','UNKNOWN_OUTCOME','FAILED','INTERRUPTED')", name="ck_attempt_outcome"),
+        CheckConstraint("(outcome = 'RUNNING') = (finished_at IS NULL)", name="ck_attempt_finished"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id", ondelete="RESTRICT"), index=True)
+    attempt_number: Mapped[int] = mapped_column(BigInteger)
+    claim_token: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True)
+    kind: Mapped[str] = mapped_column(String)
+    outcome: Mapped[str] = mapped_column(String, server_default="RUNNING")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_code: Mapped[str | None] = mapped_column(String)
+    http_status: Mapped[int | None] = mapped_column(BigInteger)
+    correlation_id: Mapped[uuid.UUID] = mapped_column(Uuid, default=uuid.uuid4)
 
 
 class OutboxEvent(Base):
