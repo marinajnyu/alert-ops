@@ -14,5 +14,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+  simulator-postgres:
+    image: postgres:17.2
+    environment:
+      POSTGRES_USER: simulator
+      POSTGRES_PASSWORD: simulator
+      POSTGRES_DB: simulator
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - simulator_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simulator -d simulator"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
 volumes:
   postgres_data:
+  simulator_data:

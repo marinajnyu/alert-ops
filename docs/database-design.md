@@ -212,4 +212,6 @@ Use real PostgreSQL integration tests for database behavior:
 
 ## Next implementation slice
 
+The next workflow is specified in [Fulfillment workflow](fulfillment-workflow.md): dispatch a queued job, create one simulated shipment, and verify the provider state.
+
 The FastAPI skeleton, configuration, PostgreSQL development service, SQLAlchemy models, first Alembic migration, and signed ingestion endpoint are implemented. Worker execution and the fulfillment provider follow after this slice is reviewed.
