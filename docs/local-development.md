@@ -26,9 +26,9 @@ python -m scripts.send_demo
 
 Run the sender repeatedly: each successful request returns `202` with the same event and job IDs. Inspect the schema and endpoint documentation at `http://127.0.0.1:8000/docs`.
 
-The current workflow persists an event, a queued job, and an unpublished outbox entry. No worker is running yet; fulfillment will not execute. `/health` is a process liveness check, not a database readiness check.
+The webhook persists an event, a queued job, and an outbox entry. Fulfillment executes when the dispatcher, worker, broker, and simulator are running; follow the [worker execution guide](worker-execution.md) to start the complete path. `/health` is a process liveness check, not a database readiness check.
 
-The next steps are described in the [fulfillment workflow design](fulfillment-workflow.md). The dispatcher and worker remain planned; instructions for running the implemented simulator are below.
+The [fulfillment workflow design](fulfillment-workflow.md) explains the execution contract. Instructions for running the simulator independently are below.
 
 ## Tests
 
@@ -55,7 +55,7 @@ Stop local services with `docker compose stop`. The named database volume preser
 
 ## Fulfillment simulator and adapter
 
-The persistent simulator and HTTP adapter are implemented. They are not connected to queued AlertOps jobs yet; the dispatcher and worker are the next slice.
+The persistent simulator and HTTP adapter can run independently or as part of the dispatcher/worker workflow.
 
 Add these settings to your local `.env` (existing files are not updated automatically):
 
@@ -80,4 +80,4 @@ AlertOps code uses `app.providers.fulfillment.FulfillmentAdapter` as a context m
 
 The existing `pytest` command includes simulator tests. PostgreSQL tests run a real HTTP server on an ephemeral localhost port, verify restart persistence and concurrent idempotency, and compare the simulator migration to its models. Adapter error tests deliberately use controlled HTTP responses for deterministic timeout and malformed-response checks. CI runs these through its existing PostgreSQL service using isolated schemas.
 
-No artificial fault-injection controls, worker, physical shipping, or real-provider integration are included yet. The simulator's normal read-back is immediately consistent.
+The simulator's normal read-back is immediately consistent. Fault-injection controls, physical shipping, and a real-provider integration are not included yet.
